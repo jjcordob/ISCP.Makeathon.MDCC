@@ -1,0 +1,24 @@
+# MDCC - Multimedia Design Code Converter
+# Python Dependencies
+
+# AI Integration - Azure OpenAI
+openai>=1.0.0
+httpx>=0.24.0
+
+# Environment variables management
+python-dotenv>=1.0.0
+
+# Computer vision for camera access
+# Note: For Python 3.14+, use opencv-python-headless instead of opencv-python
+# opencv-python-headless doesn't include GUI dependencies and is more compatible
+opencv-python-headless>=4.8.0
+Pillow>=10.0.0
+
+# GUI is built with tkinter (included in Python standard library)
+
+# Installation instructions:
+# For virtual environment: pip install -r requirements.txt
+# For system-wide (if venv fails): pip install --user -r requirements.txt
+# 
+# If you get numpy compatibility errors, install with:
+# pip install --only-binary :all: opencv-python-headless Pillow
