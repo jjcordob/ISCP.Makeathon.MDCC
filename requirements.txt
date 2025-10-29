@@ -1,4 +1,4 @@
-# MDCC - Multimedia Design Code Converter
+# DVM - Design/Verif Maker
 # Python Dependencies
 
 # AI Integration - Azure OpenAI
@@ -13,6 +13,21 @@ python-dotenv>=1.0.0
 # opencv-python-headless doesn't include GUI dependencies and is more compatible
 opencv-python-headless>=4.8.0
 Pillow>=10.0.0
+
+# Document Processing
+PyPDF2>=3.0.0
+python-docx>=1.1.0
+markdown>=3.5.0
+
+# Vision-First Document Processing (Optional but Recommended)
+# PyMuPDF (fitz) for high-quality PDF to image conversion
+PyMuPDF>=1.23.0
+
+# Alternative: pdf2image (requires poppler)
+# pdf2image>=1.16.0  # Uncomment if PyMuPDF not available
+
+# docx2pdf for DOCX to PDF conversion (optional, requires Word/LibreOffice)
+# docx2pdf>=0.1.8  # Uncomment if needed for DOCX processing
 
 # GUI is built with tkinter (included in Python standard library)
 

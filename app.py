@@ -8,6 +8,8 @@ from tkinter import ttk, scrolledtext, messagebox, filedialog
 from datetime import datetime
 from agent import DVMAgent
 from config import Config
+from document_processor import DocumentProcessor
+from verification_agents import AssertionSpecialist, CoverageSpecialist, RequirementsAnalyzer, CodeReviewer, SystemVerilogExpert
 import cv2
 import base64
 from PIL import Image, ImageTk
@@ -28,13 +30,28 @@ class DVMApp:
         # Initialize AI agent
         self.agent = DVMAgent()
         
+        # Initialize document processor and specialized agents
+        self.doc_processor = DocumentProcessor()
+        self.vision_processor = None  # Lazy load
+        self.assertion_agent = AssertionSpecialist()
+        self.coverage_agent = CoverageSpecialist()
+        self.requirements_agent = RequirementsAnalyzer()
+        self.reviewer_agent = CodeReviewer()
+        self.sv_expert = SystemVerilogExpert()  # SystemVerilog/UVM expert
+        
+        # Vision processing toggle
+        self.use_vision_filtering = tk.BooleanVar(value=False)
+        # Expert review toggle
+        self.use_expert_review = tk.BooleanVar(value=True)
+        
         # State variables
-        self.output_mode = tk.StringVar(value="rtl")  # rtl, markdown, uvm
+        self.output_mode = tk.StringVar(value="rtl")  # rtl, markdown, uvm, assertions, covergroups
         self.captured_image = None
         self.captured_image_tk = None
         self.generated_files = {}
         self.generated_output = ""  # Store full output text
         self.current_file = None
+        self.uploaded_document_path = None  # Store uploaded document path
         
         # Configure style
         self.setup_styles()
@@ -170,6 +187,38 @@ class DVMApp:
         )
         doc_desc.pack(fill=tk.X, pady=(5, 0))
         
+        # Vision filtering checkbox
+        vision_check = tk.Checkbutton(
+            doc_frame,
+            text="🔍 Use AI Vision Pre-filtering (Recommended)\n   └─ Analyze pages as images first to remove irrelevant content",
+            variable=self.use_vision_filtering,
+            font=("Segoe UI", 8),
+            bg=self.panel_bg,
+            fg="#ffa500",
+            selectcolor=self.panel_bg,
+            activebackground=self.panel_bg,
+            activeforeground="#ffa500",
+            anchor=tk.W,
+            justify=tk.LEFT
+        )
+        vision_check.pack(fill=tk.X, pady=(5, 0))
+        
+        # Expert review checkbox
+        expert_check = tk.Checkbutton(
+            doc_frame,
+            text="🎓 SystemVerilog/UVM Expert Review (Recommended)\n   └─ Production-quality review by SV/UVM expert",
+            variable=self.use_expert_review,
+            font=("Segoe UI", 8),
+            bg=self.panel_bg,
+            fg="#51cf66",
+            selectcolor=self.panel_bg,
+            activebackground=self.panel_bg,
+            activeforeground="#51cf66",
+            anchor=tk.W,
+            justify=tk.LEFT
+        )
+        expert_check.pack(fill=tk.X, pady=(2, 0))
+        
         # Right: Output Options Panel
         output_panel = tk.LabelFrame(
             top_section,
@@ -227,9 +276,44 @@ class DVMApp:
         )
         self.rb_rtl.pack(fill=tk.X, pady=2)
         
+        # Assertions option
+        self.rb_assertions = tk.Radiobutton(
+            options_frame,
+            text="○ Assertions (.sv)\n   └─ SVA Properties",
+            variable=self.output_mode,
+            value="assertions",
+            font=("Segoe UI", 9),
+            bg=self.panel_bg,
+            fg=self.fg_color,
+            selectcolor=self.panel_bg,
+            activebackground=self.panel_bg,
+            activeforeground=self.fg_color,
+            anchor=tk.W,
+            justify=tk.LEFT
+        )
+        self.rb_assertions.pack(fill=tk.X, pady=2)
+        
+        # Covergroups option
+        self.rb_covergroups = tk.Radiobutton(
+            options_frame,
+            text="○ Covergroups (.sv)\n   └─ Functional Coverage",
+            variable=self.output_mode,
+            value="covergroups",
+            font=("Segoe UI", 9),
+            bg=self.panel_bg,
+            fg=self.fg_color,
+            selectcolor=self.panel_bg,
+            activebackground=self.panel_bg,
+            activeforeground=self.fg_color,
+            anchor=tk.W,
+            justify=tk.LEFT
+        )
+        self.rb_covergroups.pack(fill=tk.X, pady=2)
+        
+        # UVM Verification Environment (complete package)
         self.rb_uvm = tk.Radiobutton(
             options_frame,
-            text="○ UVM Verification Env\n   └─ Multiple Files:\n      • Test\n      • Scoreboard\n      • Sequences\n      • Agent/Driver/Monitor\n      • Coverage/Assertions",
+            text="○ UVM Verification Env\n   └─ Full Package (TB Top, Test, Env,\n       Scoreboard, Sequences, Agent,\n       Driver, Monitor)",
             variable=self.output_mode,
             value="uvm",
             font=("Segoe UI", 9),
@@ -377,7 +461,7 @@ class DVMApp:
             relief=tk.GROOVE,
             bd=2
         )
-        log_panel.pack(fill=tk.X)
+        log_panel.pack(fill=tk.BOTH, expand=True)
         
         self.log_display = scrolledtext.ScrolledText(
             log_panel,
@@ -388,10 +472,9 @@ class DVMApp:
             insertbackground=self.fg_color,
             relief=tk.FLAT,
             padx=10,
-            pady=10,
-            height=3
+            pady=10
         )
-        self.log_display.pack(fill=tk.BOTH, expand=False, padx=10, pady=10)
+        self.log_display.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         self.log_display.config(state=tk.DISABLED)
         
         # Log tags
@@ -723,10 +806,11 @@ You can ask me about:
     def upload_document(self):
         """Upload a document file"""
         filetypes = [
-            ("All supported", "*.pdf *.docx *.txt"),
+            ("All supported", "*.pdf *.docx *.txt *.md"),
             ("PDF files", "*.pdf"),
             ("Word files", "*.docx"),
             ("Text files", "*.txt"),
+            ("Markdown files", "*.md"),
             ("All files", "*.*")
         ]
         
@@ -736,9 +820,39 @@ You can ask me about:
         )
         
         if filepath:
-            self.add_log("info", f"Document selected: {filepath}")
-            self.input_status.config(text=f"Status: ✓ Document loaded - {filepath.split('/')[-1]}", fg="#51cf66")
-            # TODO: Implement document reading logic
+            self.add_log("processing", f"⚡ Loading document: {os.path.basename(filepath)}")
+            self.root.update_idletasks()
+            
+            try:
+                # Read and preview document
+                from document_processor import DocumentReader
+                content, file_type = DocumentReader.read_file(filepath)
+                
+                # Store document path
+                self.uploaded_document_path = filepath
+                
+                # Create preview (first 500 chars)
+                preview_text = content[:500] + "..." if len(content) > 500 else content
+                
+                # Update preview
+                self.input_preview.config(
+                    text=preview_text,
+                    font=("Consolas", 8),
+                    justify=tk.LEFT,
+                    anchor=tk.NW
+                )
+                
+                self.input_status.config(
+                    text=f"Status: ✓ Document loaded - {os.path.basename(filepath)} ({file_type}, {len(content)} chars)",
+                    fg="#51cf66"
+                )
+                
+                self.add_log("success", f"✓ Document loaded successfully ({len(content)} characters)")
+                
+            except Exception as e:
+                self.add_log("error", f"❌ Error loading document: {str(e)}")
+                messagebox.showerror("Document Error", f"Failed to load document:\n{str(e)}")
+                self.uploaded_document_path = None
     
     def extract_files_from_response(self, response):
         """Extract multiple files from AI response with code blocks"""
@@ -791,6 +905,12 @@ You can ask me about:
     
     def process_input(self):
         """Process the captured image or uploaded document"""
+        # Check if we have document input (for assertions/covergroups)
+        if self.uploaded_document_path and self.output_mode.get() in ['assertions', 'covergroups']:
+            self.process_document_for_verification()
+            return
+        
+        # Otherwise, require image input
         if self.captured_image is None:
             messagebox.showwarning("No Input", "Please capture an image or upload a document first.")
             self.add_log("error", "❌ No input to process")
@@ -832,6 +952,47 @@ If multiple modules are needed, create separate files:
 
 RETURN ONLY CODE IN THIS FORMAT - NO OTHER TEXT.""",
 
+                "assertions": """Analyze this diagram and generate ONLY SystemVerilog assertions (SVA).
+
+CRITICAL INSTRUCTIONS:
+- NO explanations, NO markdown text outside code blocks
+- Return ONLY assertion code wrapped in: ```systemverilog:assertions.sv
+- Generate only SystemVerilog assertions and properties
+- Focus on protocol checking and functional verification
+
+Example format:
+```systemverilog:assertions.sv
+property p_req_ack;
+    @(posedge clk) disable iff (!rst_n)
+    req |-> ##[1:3] ack;
+endproperty
+
+assert property (p_req_ack) else $error("Request not acknowledged");
+```
+
+RETURN ONLY ASSERTION CODE IN THIS FORMAT - NO OTHER TEXT.""",
+
+                "covergroups": """Analyze this diagram and generate ONLY SystemVerilog covergroups.
+
+CRITICAL INSTRUCTIONS:
+- NO explanations, NO markdown text outside code blocks
+- Return ONLY coverage code wrapped in: ```systemverilog:coverage.sv
+- Generate only covergroups, coverpoints, and cross coverage
+- Focus on functional coverage based on the design
+
+Example format:
+```systemverilog:coverage.sv
+covergroup cg_example @(posedge clk);
+    cp_signal: coverpoint signal {
+        bins low = {[0:7]};
+        bins high = {[8:15]};
+    }
+    cross_coverage: cross cp_signal, other_signal;
+endgroup
+```
+
+RETURN ONLY COVERAGE CODE IN THIS FORMAT - NO OTHER TEXT.""",
+
                 "markdown": """Analyze this diagram and create markdown documentation.
 
 CRITICAL INSTRUCTIONS:
@@ -845,23 +1006,25 @@ Example:
 [your markdown content]
 ```
 
-RETURN ONLY IN THIS FORMAT.""",
-
-                "uvm": """Analyze this diagram and generate ONLY the UVM verification environment code.
+RETURN ONLY IN THIS FORMAT."""
+        }
+        
+        # For UVM mode, generate complete verification environment
+        if self.output_mode.get() == "uvm":
+            mode_prompts["uvm"] = """Analyze this diagram and generate a COMPLETE UVM verification environment.
 
 CRITICAL INSTRUCTIONS:
 - NO explanations, NO markdown text outside code blocks
 - Return ONLY code wrapped in: ```systemverilog:filename.sv
-- Generate separate files for each UVM component:
-  * tb_top.sv (testbench top)
-  * test.sv (test sequences)
-  * env.sv (environment)
-  * scoreboard.sv
-  * agent.sv
-  * driver.sv
-  * monitor.sv
-  * sequences.sv
-  * coverage.sv
+- Generate ALL UVM components (complete package):
+  * tb_top.sv - Testbench top module
+  * test.sv - UVM test
+  * env.sv - UVM environment
+  * scoreboard.sv - UVM scoreboard
+  * sequences.sv - UVM sequences
+  * agent.sv - UVM agent
+  * driver.sv - UVM driver
+  * monitor.sv - UVM monitor
 
 Example format:
 ```systemverilog:tb_top.sv
@@ -872,8 +1035,8 @@ Example format:
 [code]
 ```
 
-RETURN ONLY CODE IN THIS FORMAT - NO OTHER TEXT."""
-        }
+RETURN ONLY CODE IN THIS FORMAT - NO OTHER TEXT. Generate ALL 8 components."""
+        
         prompt = mode_prompts.get(self.output_mode.get(), mode_prompts["rtl"])
         self.add_log("info", f"Using default prompt for {self.output_mode.get().upper()} mode")
         
@@ -937,6 +1100,282 @@ RETURN ONLY CODE IN THIS FORMAT - NO OTHER TEXT."""
             self.add_log("error", f"❌ Error processing image: {str(e)}")
             messagebox.showerror("Processing Error", f"Error processing image:\n{str(e)}")
     
+    def process_document_for_verification(self):
+        """Process uploaded document for assertions or covergroups generation"""
+        artifact_type = self.output_mode.get()
+        use_vision = self.use_vision_filtering.get()
+        
+        if use_vision:
+            self.add_log("processing", f"⚡ Processing document with VISION PRE-FILTERING for {artifact_type.upper()}...")
+            self.add_log("info", "━━━ Vision-First AI Analysis Pipeline ━━━")
+        else:
+            self.add_log("processing", f"⚡ Processing document for {artifact_type.upper()} generation...")
+            self.add_log("info", "━━━ Enhanced AI Analysis Pipeline ━━━")
+        
+        self.root.update_idletasks()
+        
+        try:
+            if use_vision:
+                # ========== VISION-FIRST PIPELINE ==========
+                self._process_with_vision_filtering(artifact_type)
+            else:
+                # ========== STANDARD PIPELINE ==========
+                self._process_with_text_analysis(artifact_type)
+                
+        except Exception as e:
+            self.add_log("error", f"❌ Error processing document: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            messagebox.showerror("Processing Error", f"Error processing document:\n{str(e)}")
+    
+    def _process_with_vision_filtering(self, artifact_type: str):
+        """Process document using vision-first approach"""
+        # Lazy load vision processor
+        if self.vision_processor is None:
+            self.add_log("info", "� Initializing vision processor (first time)...")
+            from vision_document_processor import VisionDocumentProcessor
+            self.vision_processor = VisionDocumentProcessor()
+        
+        # Step 1: Convert pages to images and analyze with vision
+        self.add_log("info", "👁️ Step 1/7: Converting document pages to images...")
+        self.root.update_idletasks()
+        
+        vision_result = self.vision_processor.process_document_with_vision(
+            self.uploaded_document_path,
+            artifact_type
+        )
+        
+        total_pages = vision_result['total_pages']
+        relevant_pages = vision_result['relevant_pages']
+        discarded_pages = vision_result['discarded_pages']
+        
+        self.add_log("success", f"✓ Analyzed {total_pages} pages with AI vision")
+        self.add_log("info", f"  📊 Kept: {relevant_pages} pages | Discarded: {discarded_pages} pages ({discarded_pages/total_pages*100:.1f}% filtered)")
+        
+        # Show top relevant pages
+        if relevant_pages > 0:
+            self.add_log("info", "  Top relevant pages:")
+            for page_info in vision_result['filtered_page_data'][:3]:
+                analysis = page_info['analysis']
+                hints = ', '.join(analysis.get('key_hints', [])[:3])
+                self.add_log("info", f"    Page {analysis['page_number']}: Score {analysis['score']}/10 - {hints}")
+        
+        if relevant_pages == 0:
+            self.add_log("error", "❌ No relevant pages found! Try disabling vision filtering.")
+            messagebox.showerror("No Content", "Vision analysis found no relevant pages.\nTry unchecking 'Use AI Vision Pre-filtering'.")
+            return
+        
+        # Step 2: Extract text from filtered pages only
+        self.add_log("processing", "📄 Step 2/7: Extracting text from filtered pages...")
+        self.root.update_idletasks()
+        
+        filtered_text = self.vision_processor.extract_text_from_filtered_pages(vision_result)
+        self.add_log("success", f"✓ Extracted {len(filtered_text)} characters from {relevant_pages} pages")
+        
+        # Step 3: Prepare vision-filtered context
+        self.add_log("info", "📋 Step 3/7: Preparing vision-filtered context...")
+        self.root.update_idletasks()
+        
+        context = self.vision_processor.prepare_vision_context(vision_result)
+        context_size = len(context)
+        self.add_log("success", f"✓ Context prepared ({context_size} chars, {relevant_pages} pages)")
+        
+        # Continue with standard processing from step 4
+        self._continue_standard_processing(artifact_type, context, vision_result=vision_result)
+    
+    def _process_with_text_analysis(self, artifact_type: str):
+        """Process document using standard text analysis"""
+        # Step 1: Process document to find relevant sections
+        self.add_log("info", "📄 Step 1/6: Analyzing document structure and content...")
+        self.root.update_idletasks()
+        
+        processing_result = self.doc_processor.process_document(
+            self.uploaded_document_path,
+            artifact_type
+        )
+        
+        relevant_count = len(processing_result['relevant_sections'])
+        total_sections = processing_result['total_chunks']
+        self.add_log("success", f"✓ Analyzed {total_sections} sections, found {relevant_count} potentially relevant section(s)")
+        
+        # Display top scores
+        if relevant_count > 0:
+            top_3 = processing_result['relevant_sections'][:3]
+            for i, sec in enumerate(top_3, 1):
+                chunk = sec['chunk']
+                # Show hierarchical path if available
+                if chunk.get('full_path'):
+                    location = chunk['full_path']
+                else:
+                    location = chunk['title']
+                self.add_log("info", f"  #{i}: '{location}' (Score: {sec['score']:.2%})")
+        
+        # Step 1.5: AI Validation (optional but recommended)
+        self.add_log("processing", "🤖 Step 2/6: AI validation of section relevance...")
+        self.root.update_idletasks()
+        
+        try:
+            from ai_validator import AIValidator
+            validator = AIValidator()
+            validated_sections = validator.validate_and_rerank_sections(
+                processing_result['relevant_sections'],
+                artifact_type,
+                max_validate=min(5, relevant_count)  # Validate top 5
+            )
+            processing_result['relevant_sections'] = validated_sections
+            
+            # Show AI-validated scores
+            self.add_log("success", "✓ AI validation completed - sections re-ranked")
+            if len(validated_sections) > 0:
+                top_validated = validated_sections[0]
+                if 'ai_validation' in top_validated:
+                    ai_info = top_validated['ai_validation']
+                    self.add_log("info", f"  Top section reason: {ai_info.get('reason', 'N/A')[:80]}")
+                    
+        except Exception as e:
+            self.add_log("info", f"  ⚠️ AI validation skipped: {str(e)[:50]}")
+        
+        # Step 2: Prepare context for requirements analysis
+        self.add_log("info", "📋 Step 3/6: Preparing enhanced context with extracted entities...")
+        self.root.update_idletasks()
+        
+        context = self.doc_processor.prepare_context_for_agent(processing_result)
+        context_size = len(context)
+        self.add_log("success", f"✓ Context prepared ({context_size} chars)")
+        
+        # Continue with standard processing
+        self._continue_standard_processing(artifact_type, context)
+    
+    def _continue_standard_processing(self, artifact_type: str, context: str, vision_result=None):
+        """Continue processing from context preparation step"""
+        use_expert = self.use_expert_review.get()
+        step_offset = 3 if vision_result else 3
+        total_steps = 8 if (vision_result and use_expert) else (7 if vision_result or use_expert else 6)
+        
+        # Step N: Analyze requirements with specialist agent
+        self.add_log("processing", f"⚡ Step {step_offset+1}/{total_steps}: Extracting {artifact_type} requirements with AI...")
+        self.root.update_idletasks()
+        
+        analysis = self.requirements_agent.analyze_document(context, artifact_type)
+        requirements = analysis['analysis']
+        
+        req_lines = len(requirements.split('\n'))
+        self.add_log("success", f"✓ Requirements extracted successfully ({req_lines} lines)")
+        
+        # Step N+1: Generate verification code with specialized agent
+        self.add_log("processing", f"⚡ Step {step_offset+2}/{total_steps}: Generating {artifact_type} code with specialist...")
+        self.root.update_idletasks()
+        
+        if artifact_type == 'assertions':
+            generated_code = self.assertion_agent.generate_assertions(requirements)
+        else:  # covergroups
+            generated_code = self.coverage_agent.generate_covergroups(requirements)
+        
+        code_lines = len(generated_code.split('\n'))
+        self.add_log("success", f"✓ {artifact_type.capitalize()} code generated ({code_lines} lines)")
+        
+        # Step N+2: Basic review and refine code
+        self.add_log("processing", f"⚡ Step {step_offset+3}/{total_steps}: Basic code review and refinement...")
+        self.root.update_idletasks()
+        
+        review = self.reviewer_agent.review_code(generated_code, requirements, artifact_type)
+        
+        # Check if improvements are needed
+        if "IMPROVEMENTS:" in review and len(review.split("IMPROVEMENTS:")[1].strip()) > 50:
+            self.add_log("info", "  🔧 Applying suggested improvements...")
+            self.root.update_idletasks()
+            refined_code = self.reviewer_agent.refine_code(generated_code, review)
+            final_code = refined_code
+            self.add_log("success", "  ✓ Code improved based on review")
+        else:
+            final_code = generated_code
+            self.add_log("success", "  ✓ Code passed review without changes needed")
+        
+        # Step N+3: Expert SystemVerilog/UVM review (if enabled)
+        if use_expert:
+            self.add_log("processing", f"⚡ Step {step_offset+4}/{total_steps}: SystemVerilog/UVM Expert Review...")
+            self.add_log("info", "  🎓 Engaging Senior SV/UVM Expert for production-quality review...")
+            self.root.update_idletasks()
+            
+            expert_review = self.sv_expert.expert_review(final_code, artifact_type, requirements)
+            
+            # Parse expert score
+            import re
+            score_match = re.search(r'SCORE:\s*(\d+)/10', expert_review)
+            if score_match:
+                score = int(score_match.group(1))
+                self.add_log("info", f"  📊 Expert Score: {score}/10")
+                
+                # If score < 8, apply expert improvements
+                if score < 8:
+                    self.add_log("info", f"  🔧 Applying expert improvements (score: {score}/10)...")
+                    self.root.update_idletasks()
+                    expert_improved = self.sv_expert.improve_code(final_code, expert_review, artifact_type)
+                    final_code = expert_improved
+                    self.add_log("success", "  ✓ Code enhanced by SV/UVM expert")
+                else:
+                    self.add_log("success", f"  ✓ Code meets production standards (score: {score}/10)")
+            else:
+                # No score found, but apply improvements anyway
+                self.add_log("info", "  🔧 Applying expert refinements...")
+                self.root.update_idletasks()
+                expert_improved = self.sv_expert.improve_code(final_code, expert_review, artifact_type)
+                final_code = expert_improved
+                self.add_log("success", "  ✓ Code enhanced by SV/UVM expert")
+        
+        # Parse generated code to extract files
+        self.add_log("info", "📦 Extracting generated files...")
+        self.generated_files = self.extract_files_from_response(final_code)
+        
+        if self.generated_files:
+            self.add_log("success", f"✓ Generated {len(self.generated_files)} file(s): {', '.join(self.generated_files.keys())}")
+            
+            # Store output for display with analysis info
+            if vision_result:
+                display_text = f"Generated {len(self.generated_files)} file(s) from VISION-FILTERED document:\n\n"
+                display_text += f"📄 Document: {os.path.basename(self.uploaded_document_path)}\n"
+                display_text += f"� Vision Analysis: {vision_result['relevant_pages']}/{vision_result['total_pages']} pages kept\n"
+            else:
+                display_text = f"Generated {len(self.generated_files)} file(s) from enhanced document analysis:\n\n"
+                display_text += f"📄 Document: {os.path.basename(self.uploaded_document_path)}\n"
+            
+            display_text += f"{'='*60}\n\n"
+            
+            for filename, content in self.generated_files.items():
+                display_text += f"{'='*60}\n"
+                display_text += f"FILE: {filename}\n"
+                display_text += f"{'='*60}\n"
+                display_text += f"{content}\n\n"
+            
+            self.generated_output = display_text
+            
+            # Enable view button
+            self.view_results_btn.config(
+                state=tk.NORMAL,
+                text=f"👁️ View {len(self.generated_files)} Generated File(s)",
+                bg="#2d7a3e",
+                fg="#ffffff"
+            )
+        else:
+            # Fallback to raw output
+            self.generated_output = final_code
+            self.view_results_btn.config(
+                state=tk.NORMAL,
+                text="👁️ View Generated Code",
+                bg="#2d7a3e",
+                fg="#ffffff"
+            )
+        
+        # Build pipeline description
+        pipeline_features = []
+        if vision_result:
+            pipeline_features.append("VISION-FILTERED")
+        if use_expert:
+            pipeline_features.append("EXPERT-REVIEWED")
+        
+        pipeline_name = " + ".join(pipeline_features) if pipeline_features else "STANDARD"
+        self.add_log("success", f"━━━ ✅ {pipeline_name} {artifact_type.upper()} GENERATION COMPLETED! ━━━")
+    
     def save_all_files(self):
         """Save generated code to files"""
         if self.generated_files:
@@ -975,6 +1414,8 @@ RETURN ONLY CODE IN THIS FORMAT - NO OTHER TEXT."""
             # Determine default extension based on mode
             ext_map = {
                 "rtl": ".sv",
+                "assertions": ".sv",
+                "covergroups": ".sv",
                 "markdown": ".md",
                 "uvm": ".sv"
             }
@@ -1137,6 +1578,7 @@ RETURN ONLY CODE IN THIS FORMAT - NO OTHER TEXT."""
             # Clear input
             self.captured_image = None
             self.captured_image_tk = None
+            self.uploaded_document_path = None
             self.input_preview.config(image="", text="No input loaded\n\nUse 'Upload Picture' or 'Upload Document'\nto load content for processing")
             self.input_status.config(text="Status: No input", fg="#808080")
             
@@ -1150,8 +1592,12 @@ RETURN ONLY CODE IN THIS FORMAT - NO OTHER TEXT."""
                 text="👁️ View Results"
             )
             
-            # Reset agent conversation
+            # Reset all agents
             self.agent.reset_conversation()
+            self.assertion_agent.reset_conversation()
+            self.coverage_agent.reset_conversation()
+            self.requirements_agent.reset_conversation()
+            self.reviewer_agent.reset_conversation()
             
             self.add_log("info", "All inputs and outputs cleared")
             messagebox.showinfo("Success", "All cleared successfully!")
