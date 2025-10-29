@@ -1,5 +1,5 @@
 """
-AI Agent for MDCC application
+AI Agent for DVM application
 Handles interactions with Azure OpenAI for RTL and verification code generation
 """
 
@@ -9,7 +9,7 @@ import os
 import httpx
 
 
-class MDCCAgent:
+class DVMAgent:
     """AI Agent for converting diagrams and notes to RTL/verification code"""
     
     def __init__(self):
@@ -40,7 +40,7 @@ class MDCCAgent:
         
     def _build_system_prompt(self):
         """Build the system prompt for the AI agent"""
-        return """You are an expert AI assistant specializing in digital design and hardware verification. Your name is MDCC Agent (Multimedia Design Code Converter).
+        return """You are an expert AI assistant specializing in digital design and hardware verification. Your name is DVM Agent (Design/Verif Maker).
 
 Your primary capabilities include:
 1. Converting hand-drawn block diagrams, state diagrams, and flow diagrams into RTL code (Verilog/SystemVerilog/VHDL)

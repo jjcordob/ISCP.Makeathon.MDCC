@@ -1,12 +1,12 @@
 """
-MDCC - Multimedia Design Code Converter
+DVM - Design/Verif Maker
 Main application file with GUI interface for AI agent interaction
 """
 
 import tkinter as tk
 from tkinter import ttk, scrolledtext, messagebox, filedialog
 from datetime import datetime
-from agent import MDCCAgent
+from agent import DVMAgent
 from config import Config
 import cv2
 import base64
@@ -16,17 +16,17 @@ import re
 import os
 
 
-class MDCCApp:
-    """Main application class for MDCC with chat interface"""
+class DVMApp:
+    """Main application class for DVM with chat interface"""
     
     def __init__(self, root):
         self.root = root
-        self.root.title("MDCC - Multimedia Design Code Converter")
+        self.root.title("DVM - Design/Verif Maker")
         self.root.geometry("1400x900")
         self.root.minsize(1200, 800)
         
         # Initialize AI agent
-        self.agent = MDCCAgent()
+        self.agent = DVMAgent()
         
         # State variables
         self.output_mode = tk.StringVar(value="rtl")  # rtl, markdown, uvm
@@ -74,7 +74,7 @@ class MDCCApp:
         
         title_label = tk.Label(
             header_frame,
-            text="MDCC - Multimedia Design Code Converter",
+            text="DVM - Design/Verif Maker",
             font=("Segoe UI", 18, "bold"),
             bg=self.bg_color,
             fg=self.fg_color
@@ -84,7 +84,7 @@ class MDCCApp:
         # Chat with AI button
         chat_btn = tk.Button(
             header_frame,
-            text="💬 Chat with AI Agent",
+            text="🧙‍♂️ DVM Alchemist",
             command=self.open_chat_window,
             bg="#007acc",
             fg=self.fg_color,
@@ -417,7 +417,7 @@ class MDCCApp:
         """Open a separate window for chatting with the AI agent"""
         # Create chat window
         chat_window = tk.Toplevel(self.root)
-        chat_window.title("Chat with AI Agent - MDCC")
+        chat_window.title("DVM Alchemist - Transform Designs to Code")
         chat_window.geometry("800x600")
         chat_window.configure(bg=self.bg_color)
         
@@ -427,7 +427,7 @@ class MDCCApp:
         
         title_label = tk.Label(
             header_frame,
-            text="💬 Chat with AI Agent",
+            text="🧙‍♂️ DVM Alchemist",
             font=("Segoe UI", 16, "bold"),
             bg=self.bg_color,
             fg=self.fg_color
@@ -473,11 +473,11 @@ class MDCCApp:
         chat_display.config(state=tk.NORMAL)
         timestamp = datetime.now().strftime("%H:%M:%S")
         api_status = "✅ Connected" if self.agent.is_ready() else "❌ Not configured"
-        welcome_text = f"""Welcome! I'm your MDCC AI Assistant.
+        welcome_text = f"""Welcome! I'm your DVM AI Assistant - the Alchemist of Design & Verification!
 
 AI Status: {api_status} | Model: {Config.AZURE_OPENAI_MODEL_NAME}
 
-Ready to help with your RTL design and verification questions!
+Ready to help transform your designs into RTL and verification code!
 You can ask me about:
 - RTL design patterns and best practices
 - UVM verification strategies
@@ -1021,7 +1021,7 @@ RETURN ONLY CODE IN THIS FORMAT - NO OTHER TEXT."""
         
         # Create results window
         results_window = tk.Toplevel(self.root)
-        results_window.title("Generated Code - MDCC")
+        results_window.title("Generated Code - DVM")
         results_window.geometry("1000x700")
         results_window.configure(bg=self.bg_color)
         
@@ -1168,7 +1168,7 @@ RETURN ONLY CODE IN THIS FORMAT - NO OTHER TEXT."""
 def main():
     """Main entry point for the application"""
     root = tk.Tk()
-    app = MDCCApp(root)
+    app = DVMApp(root)
     root.mainloop()
 
 
