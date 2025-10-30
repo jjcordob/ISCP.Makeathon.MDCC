@@ -265,9 +265,25 @@ class DVAApp:
         pic_frame = tk.Frame(input_panel, bg=self.panel_bg)
         pic_frame.pack(fill=tk.X, padx=10, pady=10)
         
-        self.upload_pic_btn = tk.Button(
+        # Upload from file button
+        self.upload_pic_file_btn = tk.Button(
             pic_frame,
-            text="📷 Upload Picture / Camera",
+            text="�️ Upload Picture from File",
+            command=self.upload_picture_from_file,
+            bg="#2d7a3e",
+            fg=self.fg_color,
+            font=("Segoe UI", 10, "bold"),
+            relief=tk.FLAT,
+            padx=15,
+            pady=8,
+            cursor="hand2"
+        )
+        self.upload_pic_file_btn.pack(fill=tk.X, pady=(0, 5))
+        
+        # Camera capture button
+        self.camera_btn = tk.Button(
+            pic_frame,
+            text="📷 Capture from Camera",
             command=self.open_camera,
             bg="#2d7a3e",
             fg=self.fg_color,
@@ -277,7 +293,7 @@ class DVAApp:
             pady=8,
             cursor="hand2"
         )
-        self.upload_pic_btn.pack(fill=tk.X)
+        self.camera_btn.pack(fill=tk.X)
         
         pic_desc = tk.Label(
             pic_frame,
@@ -837,6 +853,63 @@ Ready to perform some alchemy? Ask me anything or upload a document to begin!"""
         """Get response from AI agent"""
         response = self.agent.get_response(user_message, image_data=image_data)
         return response
+    
+    def upload_picture_from_file(self):
+        """Upload a picture from local storage"""
+        filetypes = [
+            ("Image files", "*.png *.jpg *.jpeg *.bmp *.gif *.tiff"),
+            ("PNG files", "*.png"),
+            ("JPEG files", "*.jpg *.jpeg"),
+            ("All files", "*.*")
+        ]
+        
+        filepath = filedialog.askopenfilename(
+            title="Select Picture",
+            filetypes=filetypes
+        )
+        
+        if filepath:
+            self.add_log("processing", f"⚡ Loading picture: {os.path.basename(filepath)}")
+            self.root.update_idletasks()
+            
+            try:
+                # Load image using PIL
+                img = Image.open(filepath)
+                
+                # Convert to RGB if needed
+                if img.mode != 'RGB':
+                    img = img.convert('RGB')
+                
+                # Convert PIL Image to numpy array (OpenCV format)
+                import numpy as np
+                self.captured_image = np.array(img)
+                
+                # Convert RGB to BGR for OpenCV compatibility (if needed later)
+                # Note: We store in RGB format, conversion happens when needed
+                
+                # Create thumbnail for preview
+                img_preview = img.copy()
+                img_preview.thumbnail((400, 300), Image.Resampling.LANCZOS)
+                self.captured_image_tk = ImageTk.PhotoImage(img_preview)
+                
+                # Update preview
+                self.input_preview.config(
+                    image=self.captured_image_tk,
+                    text=""
+                )
+                
+                self.input_status.config(
+                    text=f"Status: ✓ Picture loaded - {os.path.basename(filepath)} ({self.captured_image.shape[1]}x{self.captured_image.shape[0]})",
+                    fg="#51cf66"
+                )
+                
+                self.add_log("success", f"✓ Picture loaded successfully ({self.captured_image.shape[1]}x{self.captured_image.shape[0]} pixels)")
+                
+            except Exception as e:
+                self.add_log("error", f"❌ Error loading picture: {str(e)}")
+                messagebox.showerror("Picture Error", f"Failed to load picture:\n{str(e)}")
+                self.captured_image = None
+                self.captured_image_tk = None
     
     def open_camera(self):
         """Open camera to capture an image"""
@@ -1627,6 +1700,242 @@ RETURN ONLY CODE IN THIS FORMAT - NO OTHER TEXT. Generate ALL 8 components."""
         self.add_log("success", "✓ Output copied to clipboard")
         messagebox.showinfo("Success", "Output copied to clipboard!")
     
+    def render_markdown_to_html(self, markdown_text):
+        """Convert markdown to simple formatted text for display"""
+        lines = markdown_text.split('\n')
+        formatted_lines = []
+        
+        for line in lines:
+            # Headers
+            if line.startswith('# '):
+                formatted_lines.append(('header1', line[2:]))
+            elif line.startswith('## '):
+                formatted_lines.append(('header2', line[3:]))
+            elif line.startswith('### '):
+                formatted_lines.append(('header3', line[4:]))
+            elif line.startswith('#### '):
+                formatted_lines.append(('header4', line[5:]))
+            # Code blocks
+            elif line.startswith('```'):
+                formatted_lines.append(('code_fence', line))
+            # Lists
+            elif line.strip().startswith('- ') or line.strip().startswith('* '):
+                formatted_lines.append(('list', line))
+            # Bold and inline code
+            else:
+                formatted_lines.append(('normal', line))
+        
+        return formatted_lines
+    
+    def create_markdown_preview(self, parent_frame, content):
+        """Create a split view with markdown source and preview"""
+        # Create paned window for split view
+        paned = tk.PanedWindow(parent_frame, orient=tk.HORIZONTAL, bg=self.bg_color, sashwidth=5, sashrelief=tk.RAISED)
+        paned.pack(fill=tk.BOTH, expand=True)
+        
+        # Left pane: Source code with syntax highlighting
+        source_frame = tk.Frame(paned, bg=self.panel_bg)
+        paned.add(source_frame, width=500)
+        
+        source_label = tk.Label(
+            source_frame,
+            text="📝 Markdown Source",
+            font=("Segoe UI", 10, "bold"),
+            bg=self.panel_bg,
+            fg=self.fg_color,
+            anchor=tk.W,
+            padx=10,
+            pady=5
+        )
+        source_label.pack(fill=tk.X)
+        
+        source_text = scrolledtext.ScrolledText(
+            source_frame,
+            wrap=tk.WORD,
+            font=("Consolas", 10),
+            bg=self.chat_bg,
+            fg=self.fg_color,
+            insertbackground=self.fg_color,
+            relief=tk.FLAT,
+            padx=15,
+            pady=15
+        )
+        source_text.pack(fill=tk.BOTH, expand=True)
+        source_text.insert("1.0", content)
+        
+        # Apply markdown syntax highlighting to source
+        self.apply_syntax_highlighting(source_text, content, "file.md")
+        source_text.config(state=tk.DISABLED)
+        
+        # Right pane: Rendered preview
+        preview_frame = tk.Frame(paned, bg=self.panel_bg)
+        paned.add(preview_frame, width=500)
+        
+        preview_label = tk.Label(
+            preview_frame,
+            text="👁️ Preview",
+            font=("Segoe UI", 10, "bold"),
+            bg=self.panel_bg,
+            fg=self.fg_color,
+            anchor=tk.W,
+            padx=10,
+            pady=5
+        )
+        preview_label.pack(fill=tk.X)
+        
+        preview_text = scrolledtext.ScrolledText(
+            preview_frame,
+            wrap=tk.WORD,
+            font=("Segoe UI", 10),
+            bg="#ffffff",
+            fg="#000000",
+            insertbackground="#000000",
+            relief=tk.FLAT,
+            padx=20,
+            pady=20
+        )
+        preview_text.pack(fill=tk.BOTH, expand=True)
+        
+        # Configure tags for preview
+        preview_text.tag_config("header1", font=("Segoe UI", 20, "bold"), foreground="#1a1a1a", spacing1=10, spacing3=10)
+        preview_text.tag_config("header2", font=("Segoe UI", 16, "bold"), foreground="#2a2a2a", spacing1=8, spacing3=8)
+        preview_text.tag_config("header3", font=("Segoe UI", 14, "bold"), foreground="#3a3a3a", spacing1=6, spacing3=6)
+        preview_text.tag_config("header4", font=("Segoe UI", 12, "bold"), foreground="#4a4a4a", spacing1=4, spacing3=4)
+        preview_text.tag_config("normal", font=("Segoe UI", 10), foreground="#000000")
+        preview_text.tag_config("code_fence", font=("Consolas", 9), foreground="#666666", background="#f5f5f5")
+        preview_text.tag_config("code_inline", font=("Consolas", 9), foreground="#c7254e", background="#f9f2f4")
+        preview_text.tag_config("list", font=("Segoe UI", 10), foreground="#000000", lmargin1=20, lmargin2=40)
+        preview_text.tag_config("bold", font=("Segoe UI", 10, "bold"), foreground="#000000")
+        
+        # Render markdown content
+        formatted_lines = self.render_markdown_to_html(content)
+        in_code_block = False
+        
+        for tag, line in formatted_lines:
+            if tag == 'code_fence':
+                in_code_block = not in_code_block
+                preview_text.insert(tk.END, line + "\n", tag)
+            elif in_code_block:
+                preview_text.insert(tk.END, line + "\n", "code_fence")
+            else:
+                # Handle inline code and bold
+                import re
+                if '`' in line or '**' in line or '*' in line:
+                    # Split by inline code
+                    parts = re.split(r'(`[^`]+`)', line)
+                    for part in parts:
+                        if part.startswith('`') and part.endswith('`'):
+                            preview_text.insert(tk.END, part[1:-1], "code_inline")
+                        else:
+                            # Handle bold
+                            bold_parts = re.split(r'(\*\*[^*]+\*\*)', part)
+                            for bold_part in bold_parts:
+                                if bold_part.startswith('**') and bold_part.endswith('**'):
+                                    preview_text.insert(tk.END, bold_part[2:-2], "bold")
+                                else:
+                                    preview_text.insert(tk.END, bold_part, tag)
+                    preview_text.insert(tk.END, "\n")
+                else:
+                    preview_text.insert(tk.END, line + "\n", tag)
+        
+        preview_text.config(state=tk.DISABLED)
+        
+        return paned
+    
+    def apply_syntax_highlighting(self, text_widget, content, filename=""):
+        """Apply syntax highlighting to code based on file extension"""
+        # Determine file type
+        is_sv = filename.endswith('.sv') or filename.endswith('.v')
+        is_md = filename.endswith('.md')
+        
+        # Configure syntax highlighting tags
+        if is_sv or (not is_md and 'module' in content):
+            # SystemVerilog syntax highlighting
+            text_widget.tag_config("keyword", foreground="#569cd6")  # Blue
+            text_widget.tag_config("type", foreground="#4ec9b0")     # Cyan
+            text_widget.tag_config("comment", foreground="#6a9955")  # Green
+            text_widget.tag_config("string", foreground="#ce9178")   # Orange
+            text_widget.tag_config("number", foreground="#b5cea8")   # Light green
+            text_widget.tag_config("operator", foreground="#d4d4d4") # White
+            text_widget.tag_config("function", foreground="#dcdcaa") # Yellow
+            
+            # SystemVerilog keywords
+            sv_keywords = [
+                'module', 'endmodule', 'input', 'output', 'inout', 'wire', 'reg',
+                'always', 'always_ff', 'always_comb', 'always_latch',
+                'if', 'else', 'case', 'casez', 'casex', 'default', 'endcase',
+                'for', 'while', 'repeat', 'forever', 'begin', 'end',
+                'function', 'endfunction', 'task', 'endtask',
+                'assign', 'initial', 'posedge', 'negedge',
+                'parameter', 'localparam', 'typedef', 'enum', 'struct',
+                'class', 'endclass', 'extends', 'virtual', 'interface', 'endinterface',
+                'property', 'endproperty', 'assert', 'assume', 'cover',
+                'covergroup', 'endgroup', 'coverpoint', 'cross', 'bins',
+                'package', 'endpackage', 'import', 'export',
+                'generate', 'endgenerate', 'genvar'
+            ]
+            
+            # SystemVerilog types
+            sv_types = [
+                'logic', 'bit', 'byte', 'shortint', 'int', 'longint',
+                'integer', 'time', 'real', 'realtime', 'shortreal',
+                'string', 'event', 'void', 'signed', 'unsigned'
+            ]
+            
+            # Apply highlighting
+            lines = content.split('\n')
+            for i, line in enumerate(lines):
+                line_start = f"{i+1}.0"
+                
+                # Comments (// and /* */)
+                if '//' in line:
+                    comment_start = line.index('//')
+                    text_widget.tag_add("comment", f"{i+1}.{comment_start}", f"{i+1}.end")
+                    line = line[:comment_start]  # Don't highlight after comment
+                
+                # Strings
+                import re
+                for match in re.finditer(r'"[^"]*"', line):
+                    text_widget.tag_add("string", f"{i+1}.{match.start()}", f"{i+1}.{match.end()}")
+                
+                # Numbers (hex, decimal, binary)
+                for match in re.finditer(r'\b\d+\'[hbdHBD][0-9a-fA-F_]+\b|\b\d+\b', line):
+                    text_widget.tag_add("number", f"{i+1}.{match.start()}", f"{i+1}.{match.end()}")
+                
+                # Keywords
+                for keyword in sv_keywords:
+                    pattern = r'\b' + keyword + r'\b'
+                    for match in re.finditer(pattern, line):
+                        text_widget.tag_add("keyword", f"{i+1}.{match.start()}", f"{i+1}.{match.end()}")
+                
+                # Types
+                for sv_type in sv_types:
+                    pattern = r'\b' + sv_type + r'\b'
+                    for match in re.finditer(pattern, line):
+                        text_widget.tag_add("type", f"{i+1}.{match.start()}", f"{i+1}.{match.end()}")
+        
+        elif is_md:
+            # Markdown syntax highlighting
+            text_widget.tag_config("md_header", foreground="#569cd6", font=("Consolas", 11, "bold"))
+            text_widget.tag_config("md_code", foreground="#ce9178", background="#2d2d2d")
+            text_widget.tag_config("md_bold", font=("Consolas", 10, "bold"))
+            text_widget.tag_config("md_italic", font=("Consolas", 10, "italic"))
+            
+            lines = content.split('\n')
+            for i, line in enumerate(lines):
+                # Headers
+                if line.startswith('#'):
+                    text_widget.tag_add("md_header", f"{i+1}.0", f"{i+1}.end")
+                
+                # Inline code
+                import re
+                for match in re.finditer(r'`[^`]+`', line):
+                    text_widget.tag_add("md_code", f"{i+1}.{match.start()}", f"{i+1}.{match.end()}")
+                
+                # Bold
+                for match in re.finditer(r'\*\*[^*]+\*\*', line):
+                    text_widget.tag_add("md_bold", f"{i+1}.{match.start()}", f"{i+1}.{match.end()}")
+    
     def show_results_window(self):
         """Open a window to display generated results"""
         if not self.generated_output:
@@ -1678,9 +1987,43 @@ RETURN ONLY CODE IN THIS FORMAT - NO OTHER TEXT. Generate ALL 8 components."""
                 tab_frame = tk.Frame(notebook, bg=self.chat_bg)
                 notebook.add(tab_frame, text=filename)
                 
-                # Add text widget for this file
+                # Check if markdown file
+                if filename.endswith('.md'):
+                    # Create split view with preview
+                    self.create_markdown_preview(tab_frame, content)
+                else:
+                    # Standard code view with syntax highlighting
+                    text_widget = scrolledtext.ScrolledText(
+                        tab_frame,
+                        wrap=tk.WORD,
+                        font=("Consolas", 10),
+                        bg=self.chat_bg,
+                        fg=self.fg_color,
+                        insertbackground=self.fg_color,
+                        relief=tk.FLAT,
+                        padx=15,
+                        pady=15
+                    )
+                    text_widget.pack(fill=tk.BOTH, expand=True)
+                    text_widget.insert("1.0", content)
+                    
+                    # Apply syntax highlighting
+                    self.apply_syntax_highlighting(text_widget, content, filename)
+                    
+                    text_widget.config(state=tk.DISABLED)
+        else:
+            # Single text area for all output
+            text_frame = tk.Frame(results_window, bg=self.bg_color)
+            text_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=(0, 10))
+            
+            # Check if output is markdown
+            if self.output_mode.get() == "markdown" or (self.generated_output and self.generated_output.strip().startswith('#')):
+                # Create split view with preview for markdown
+                self.create_markdown_preview(text_frame, self.generated_output)
+            else:
+                # Standard code view
                 text_widget = scrolledtext.ScrolledText(
-                    tab_frame,
+                    text_frame,
                     wrap=tk.WORD,
                     font=("Consolas", 10),
                     bg=self.chat_bg,
@@ -1691,27 +2034,12 @@ RETURN ONLY CODE IN THIS FORMAT - NO OTHER TEXT. Generate ALL 8 components."""
                     pady=15
                 )
                 text_widget.pack(fill=tk.BOTH, expand=True)
-                text_widget.insert("1.0", content)
+                text_widget.insert("1.0", self.generated_output)
+                
+                # Apply syntax highlighting (detect from content)
+                self.apply_syntax_highlighting(text_widget, self.generated_output, "code.sv")
+                
                 text_widget.config(state=tk.DISABLED)
-        else:
-            # Single text area for all output
-            text_frame = tk.Frame(results_window, bg=self.bg_color)
-            text_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=(0, 10))
-            
-            text_widget = scrolledtext.ScrolledText(
-                text_frame,
-                wrap=tk.WORD,
-                font=("Consolas", 10),
-                bg=self.chat_bg,
-                fg=self.fg_color,
-                insertbackground=self.fg_color,
-                relief=tk.FLAT,
-                padx=15,
-                pady=15
-            )
-            text_widget.pack(fill=tk.BOTH, expand=True)
-            text_widget.insert("1.0", self.generated_output)
-            text_widget.config(state=tk.DISABLED)
         
         # Action buttons at bottom
         button_frame = tk.Frame(results_window, bg=self.bg_color)
