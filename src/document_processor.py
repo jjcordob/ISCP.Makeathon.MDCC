@@ -1,5 +1,5 @@
 """
-Document Processor for DVM
+Document Processor for DVA (Design Verification Alchemist)
 Handles PDF, DOCX, MD, and TXT files to extract verification requirements
 """
 

@@ -2,20 +2,43 @@
 applyTo: '**'
 ---
 
-# MDCC Instructions
-This is going to be an application with an interface that leverages AI capabilities to enhance user experience and functionality. The application will be designed to take multimedia files or access the camera as input to perform tasks, analyze data, and generate outputs.
+# DVA (Design Verification Alchemist) Instructions
+Inspired by Full Metal Alchemist, DVA transforms ("transmutes") hand-written notes, diagrams, and specifications into production-ready SystemVerilog code.
 
-Pictures of notes in the tablet, captures of documents, notes in a paper sheet, etc.. about block diagrams, state diagrams, descriptions flow diagrams written on hand or taken by spect will be converted into RTL or a verification environment
+This application leverages AI vision capabilities to process multimedia inputs—from camera captures to document uploads—and generate hardware RTL or verification environments.
 
-## RTL generation
-The application will allow users to upload images or capture photos of their hand-drawn diagrams and notes. The AI will process these images to extract relevant information and convert them into RTL code. The generated RTL code will be optimized for performance and scalability, following established coding standards and conventions. Pictures will include notes, block diagrams, state diagrams, flow diagrams, and other relevant information.
+**Core Alchemy:** Hand-drawn block diagrams, state machines, flow diagrams, or notes on paper sheets → SystemVerilog RTL or verification code
 
-RTL can be generated in different files or in a single file depending on the complexity of the design and user preferences.
+## RTL Transmutation (Generation)
+DVA allows users to **snap photos of hand-written notes on paper sheets** or upload digital documents. The AI vision processes these images—extracting block diagrams, state machines, timing diagrams, and design notes—then transmutes them into synthesizable SystemVerilog RTL code.
 
-## Verification environment generation
-The application will also support the generation of verification environments based on the extracted information from the uploaded images. The AI will create testbenches, simulation scripts, and other necessary components to verify the functionality of the generated RTL code. The verification environment will be designed to ensure code quality and reliability, with robust error handling and input validation.
+**Input Examples:**
+- Napkin sketches of state diagrams
+- Whiteboard photos of block diagrams
+- Hand-drawn timing diagrams on paper
+- Tablet notes with flow diagrams
+- PDF specification documents
 
-It can be pictures block diagrams, notes about checkers, assertions or covergroups, if the user wants a file just with covergroups, or assertions or checkers, it can be specified to the agent
+The generated RTL is optimized for performance, follows IEEE 1800 standards, and can be output as single or multiple files based on design complexity.
 
-## Agent
-You can add extra information for the agent to process the multimedia input, if the input is not something that can be transformed into RTL or verification environment, the agent should inform the user about it and ask for new input.
+## Verification Environment Transmutation
+DVA transmutes verification requirements from any visual source into complete SystemVerilog verification code: assertions (SVA), covergroups, checkers, or full UVM environments.
+
+**Input Examples:**
+- Hand-written test scenarios on paper
+- Photos of coverage matrices
+- Sketches of assertion requirements
+- Notes about protocol checkers
+
+**Output Options (configurable):**
+- SystemVerilog Assertions (SVA) only
+- Functional coverage (covergroups) only
+- Protocol checkers
+- Complete UVM testbench environment
+
+All generated code includes requirement traceability, error handling, and follows UVM/SVA best practices.
+
+## Alchemist Agent
+The DVA agent can accept additional context to guide the transmutation process. If the input cannot be converted into RTL or verification code (e.g., unrelated content), the agent will inform the user and request valid design/verification material.
+
+**Alchemy Law:** Equivalent exchange—quality output requires quality input. Clear diagrams and specifications yield better code.

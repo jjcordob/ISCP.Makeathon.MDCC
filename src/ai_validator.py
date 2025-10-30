@@ -4,7 +4,7 @@ Uses AI to validate and re-rank document sections for better accuracy
 """
 
 from typing import Dict, List
-from config import Config
+from src.config import Config
 from openai import AzureOpenAI
 import httpx
 

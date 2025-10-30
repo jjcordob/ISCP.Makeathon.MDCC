@@ -1,7 +1,7 @@
 """
-Vision-First Document Processor for DVM
+Vision-First Document Processor for DVA (Design Verification Alchemist)
 Uses AI vision to pre-filter document pages for relevant content
-before text extraction and code generation
+before text extraction and code transmutation (generation)
 """
 
 import os
@@ -14,7 +14,7 @@ from PIL import Image
 from docx import Document as DocxDocument
 from docx.shared import Inches
 import tempfile
-from config import Config
+from src.config import Config
 
 
 class DocumentToImageConverter:
@@ -193,8 +193,8 @@ class VisionPageAnalyzer:
     
     def __init__(self):
         """Initialize vision analyzer with AI agent"""
-        from agent import DVMAgent
-        self.agent = DVMAgent()
+        from agent import DVAAgent
+        self.agent = DVAAgent()
     
     def analyze_page_for_relevance(self, page_data: Dict[str, any], artifact_type: str) -> Dict[str, any]:
         """
@@ -371,13 +371,13 @@ class VisionDocumentProcessor:
                 pages = self.converter.docx_to_images(filepath)
             except:
                 # Fallback: extract text and convert to images
-                from document_processor import DocumentReader
+                from src.document_processor import DocumentReader
                 text, _ = DocumentReader.read_file(filepath)
                 # Split into page-sized chunks
                 chunks = [text[i:i+3000] for i in range(0, len(text), 3000)]
                 pages = [self.converter.text_to_image(chunk, i+1) for i, chunk in enumerate(chunks)]
         elif file_ext in ['.txt', '.md']:
-            from document_processor import DocumentReader
+            from src.document_processor import DocumentReader
             text, _ = DocumentReader.read_file(filepath)
             # Split into page-sized chunks
             chunks = [text[i:i+3000] for i in range(0, len(text), 3000)]
@@ -437,7 +437,7 @@ class VisionDocumentProcessor:
         relevant_page_nums = [p['page_data']['page_number'] for p in processing_result['filtered_page_data']]
         
         # Extract text from original document, filtered by page numbers
-        from document_processor import DocumentReader
+        from src.document_processor import DocumentReader
         full_text, _ = DocumentReader.read_file(filepath)
         
         # For PDF, extract specific pages

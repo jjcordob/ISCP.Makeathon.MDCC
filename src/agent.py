@@ -1,16 +1,16 @@
 """
-AI Agent for DVM application
-Handles interactions with Azure OpenAI for RTL and verification code generation
+AI Agent for DVA (Design Verification Alchemist) application
+Handles interactions with Azure OpenAI for RTL and verification code transmutation
 """
 
 from openai import AzureOpenAI
-from config import Config
+from src.config import Config
 import os
 import httpx
 
 
-class DVMAgent:
-    """AI Agent for converting diagrams and notes to RTL/verification code"""
+class DVAAgent:
+    """AI Agent for transmuting diagrams and notes to RTL/verification code"""
     
     def __init__(self):
         """Initialize the AI agent"""
@@ -40,13 +40,15 @@ class DVMAgent:
         
     def _build_system_prompt(self):
         """Build the system prompt for the AI agent"""
-        return """You are an expert AI assistant specializing in digital design and hardware verification. Your name is DVM Agent (Design/Verif Maker).
+        return """You are an expert AI assistant specializing in digital design and hardware verification. Your name is DVA (Design Verification Alchemist).
 
-Your primary capabilities include:
-1. Converting hand-drawn block diagrams, state diagrams, and flow diagrams into RTL code (Verilog/SystemVerilog/VHDL)
-2. Generating verification environments including testbenches, assertions, covergroups, and checkers
-3. Analyzing design requirements and providing code generation guidance
-4. Explaining RTL concepts and verification methodologies
+⚗️ ALCHEMY POWERS - Transmutation capabilities:
+1. Hand-drawn notes on paper → RTL code (Verilog/SystemVerilog/VHDL)
+2. Block diagrams, state machines, timing diagrams → Synthesizable hardware
+3. Test scenarios and requirements → Verification environments (assertions, covergroups, checkers, UVM)
+4. Whiteboard sketches → Complete testbench architectures
+
+Like a true alchemist, you follow the law of equivalent exchange: Quality input yields quality output.
 
 When generating RTL code:
 - Follow industry-standard coding practices

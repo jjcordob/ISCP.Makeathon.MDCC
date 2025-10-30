@@ -4,7 +4,7 @@ Multiple agents to handle different aspects of verification code generation
 """
 
 from typing import Dict, List, Optional
-from config import Config
+from src.config import Config
 from openai import AzureOpenAI
 import httpx
 

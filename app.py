@@ -1,34 +1,73 @@
 """
-DVM - Design/Verif Maker
-Main application file with GUI interface for AI agent interaction
+DVA - Design Verification Alchemist
+Transmute hand-written notes and diagrams into production-ready SystemVerilog code
 """
 
 import tkinter as tk
 from tkinter import ttk, scrolledtext, messagebox, filedialog
 from datetime import datetime
-from agent import DVMAgent
-from config import Config
-from document_processor import DocumentProcessor
-from verification_agents import AssertionSpecialist, CoverageSpecialist, RequirementsAnalyzer, CodeReviewer, SystemVerilogExpert
+from src.agent import DVAAgent
+from src.config import Config
+from src.document_processor import DocumentProcessor
+from src.verification_agents import AssertionSpecialist, CoverageSpecialist, RequirementsAnalyzer, CodeReviewer, SystemVerilogExpert
 import cv2
 import base64
 from PIL import Image, ImageTk
 import io
 import re
 import os
+import numpy as np
 
 
-class DVMApp:
-    """Main application class for DVM with chat interface"""
+class DVAApp:
+    """Main application class for DVA with chat interface"""
     
     def __init__(self, root):
         self.root = root
-        self.root.title("DVM - Design/Verif Maker")
+        self.root.title("DVA - Design Verification Alchemist")
         self.root.geometry("1400x900")
         self.root.minsize(1200, 800)
         
+        # Initialize background color early for splash screen
+        self.bg_color = "#1e1e1e"
+        
+        # Show welcome splash screen (will call initialize_app when done)
+        self.show_welcome_screen()
+    
+    def initialize_app(self):
+        """Initialize the application after welcome screen"""
+        
+        # Set window icon (taskbar icon)
+        try:
+            icon_path = os.path.join(os.path.dirname(__file__), "icons", "icon2.png")
+            if os.path.exists(icon_path):
+                self.root.iconphoto(True, tk.PhotoImage(file=icon_path))
+                # Load icon2 for button use (keep reference) and invert colors to white
+                button_icon_path = os.path.join(os.path.dirname(__file__), "icons", "icon2.png")
+                if os.path.exists(button_icon_path):
+                    icon_img = Image.open(button_icon_path)
+                    # Convert to RGBA if not already
+                    if icon_img.mode != 'RGBA':
+                        icon_img = icon_img.convert('RGBA')
+                    # Invert colors (black to white)
+                    import numpy as np
+                    img_array = np.array(icon_img)
+                    # Invert RGB channels but keep alpha
+                    img_array[:, :, :3] = 255 - img_array[:, :, :3]
+                    icon_img = Image.fromarray(img_array)
+                    # Resize for button
+                    icon_img = icon_img.resize((20, 20), Image.Resampling.LANCZOS)
+                    self.chat_icon = ImageTk.PhotoImage(icon_img)
+                else:
+                    self.chat_icon = None
+            else:
+                self.chat_icon = None
+        except Exception as e:
+            print(f"Could not load icon: {e}")
+            self.chat_icon = None
+        
         # Initialize AI agent
-        self.agent = DVMAgent()
+        self.agent = DVAAgent()
         
         # Initialize document processor and specialized agents
         self.doc_processor = DocumentProcessor()
@@ -61,6 +100,55 @@ class DVMApp:
         
         # Check API status
         self.check_api_status()
+    
+    def show_welcome_screen(self):
+        """Display welcome splash screen with welcome.png"""
+        # Hide the main window initially
+        self.root.withdraw()
+        
+        # Create splash window
+        splash = tk.Toplevel()
+        splash.overrideredirect(True)  # Remove window decorations
+        
+        # Load welcome image
+        try:
+            welcome_path = os.path.join(os.path.dirname(__file__), "icons", "welcome.png")
+            if os.path.exists(welcome_path):
+                welcome_img = Image.open(welcome_path)
+                # Get image dimensions
+                img_width, img_height = welcome_img.size
+                
+                # Create PhotoImage
+                welcome_photo = ImageTk.PhotoImage(welcome_img)
+                
+                # Center the splash window
+                screen_width = splash.winfo_screenwidth()
+                screen_height = splash.winfo_screenheight()
+                x = (screen_width - img_width) // 2
+                y = (screen_height - img_height) // 2
+                splash.geometry(f"{img_width}x{img_height}+{x}+{y}")
+                
+                # Display image
+                label = tk.Label(splash, image=welcome_photo, bg=self.bg_color)
+                label.image = welcome_photo  # Keep reference
+                label.pack()
+                
+                # Close splash and show main window after 3 seconds
+                splash.after(3000, lambda: self.close_splash(splash))
+            else:
+                # If welcome.png doesn't exist, just show main window
+                self.root.deiconify()
+        except Exception as e:
+            print(f"Error loading welcome screen: {e}")
+            # Show main window if splash fails
+            self.root.deiconify()
+    
+    def close_splash(self, splash):
+        """Close splash screen and show main window"""
+        splash.destroy()
+        self.root.deiconify()
+        # Initialize the rest of the application
+        self.initialize_app()
         
     def setup_styles(self):
         """Configure application styles"""
@@ -89,28 +177,72 @@ class DVMApp:
         header_frame = tk.Frame(main_frame, bg=self.bg_color)
         header_frame.pack(fill=tk.X, pady=(0, 10))
         
-        title_label = tk.Label(
-            header_frame,
-            text="DVM - Design/Verif Maker",
-            font=("Segoe UI", 18, "bold"),
-            bg=self.bg_color,
-            fg=self.fg_color
-        )
+        # Load name1.png for title
+        try:
+            name_icon_path = os.path.join(os.path.dirname(__file__), "icons", "name1.png")
+            if os.path.exists(name_icon_path):
+                name_img = Image.open(name_icon_path)
+                # Resize to fit title height (approx 30 pixels high)
+                name_img = name_img.resize((int(name_img.width * 30 / name_img.height), 30), Image.Resampling.LANCZOS)
+                self.name_icon = ImageTk.PhotoImage(name_img)
+                
+                title_label = tk.Label(
+                    header_frame,
+                    text=" DVA - Design Verification Alchemist",
+                    image=self.name_icon,
+                    compound=tk.LEFT,
+                    font=("Segoe UI", 18, "bold"),
+                    bg=self.bg_color,
+                    fg=self.fg_color
+                )
+            else:
+                title_label = tk.Label(
+                    header_frame,
+                    text="DVA - Design Verification Alchemist",
+                    font=("Segoe UI", 18, "bold"),
+                    bg=self.bg_color,
+                    fg=self.fg_color
+                )
+        except Exception as e:
+            print(f"Could not load name icon: {e}")
+            title_label = tk.Label(
+                header_frame,
+                text="DVA - Design Verification Alchemist",
+                font=("Segoe UI", 18, "bold"),
+                bg=self.bg_color,
+                fg=self.fg_color
+            )
         title_label.pack(side=tk.LEFT)
         
         # Chat with AI button
-        chat_btn = tk.Button(
-            header_frame,
-            text="🧙‍♂️ DVM Alchemist",
-            command=self.open_chat_window,
-            bg="#007acc",
-            fg=self.fg_color,
-            font=("Segoe UI", 10, "bold"),
-            relief=tk.FLAT,
-            padx=20,
-            pady=8,
-            cursor="hand2"
-        )
+        if self.chat_icon:
+            chat_btn = tk.Button(
+                header_frame,
+                text=" DVA Alchemist",
+                image=self.chat_icon,
+                compound=tk.LEFT,
+                command=self.open_chat_window,
+                bg="#007acc",
+                fg=self.fg_color,
+                font=("Segoe UI", 10, "bold"),
+                relief=tk.FLAT,
+                padx=20,
+                pady=8,
+                cursor="hand2"
+            )
+        else:
+            chat_btn = tk.Button(
+                header_frame,
+                text="⚗️ DVA Alchemist",
+                command=self.open_chat_window,
+                bg="#007acc",
+                fg=self.fg_color,
+                font=("Segoe UI", 10, "bold"),
+                relief=tk.FLAT,
+                padx=20,
+                pady=8,
+                cursor="hand2"
+            )
         chat_btn.pack(side=tk.RIGHT)
         
         # ========== TOP SECTION: INPUT SOURCE + OUTPUT OPTIONS ==========
@@ -262,7 +394,7 @@ class DVMApp:
         
         self.rb_rtl = tk.Radiobutton(
             options_frame,
-            text="● RTL Design (.sv)\n   └─ Module + Interfaces",
+            text="○ RTL Design (.sv)\n   └─ Module + Interfaces",
             variable=self.output_mode,
             value="rtl",
             font=("Segoe UI", 9),
@@ -500,21 +632,57 @@ class DVMApp:
         """Open a separate window for chatting with the AI agent"""
         # Create chat window
         chat_window = tk.Toplevel(self.root)
-        chat_window.title("DVM Alchemist - Transform Designs to Code")
+        chat_window.title("DVA Alchemist - Transmute Designs to Code")
         chat_window.geometry("800x600")
         chat_window.configure(bg=self.bg_color)
+        
+        # Set window icon
+        try:
+            icon_path = os.path.join(os.path.dirname(__file__), "icons", "icon2.png")
+            if os.path.exists(icon_path):
+                chat_window.iconphoto(True, tk.PhotoImage(file=icon_path))
+        except Exception as e:
+            print(f"Could not load chat window icon: {e}")
         
         # Header
         header_frame = tk.Frame(chat_window, bg=self.bg_color)
         header_frame.pack(fill=tk.X, padx=10, pady=10)
         
-        title_label = tk.Label(
-            header_frame,
-            text="🧙‍♂️ DVM Alchemist",
-            font=("Segoe UI", 16, "bold"),
-            bg=self.bg_color,
-            fg=self.fg_color
-        )
+        # Load name1.png for chat window title
+        try:
+            chat_title_icon_path = os.path.join(os.path.dirname(__file__), "icons", "name1.png")
+            if os.path.exists(chat_title_icon_path):
+                chat_title_img = Image.open(chat_title_icon_path)
+                # Resize to fit title height (approx 40 pixels high)
+                chat_title_img = chat_title_img.resize((int(chat_title_img.width * 40 / chat_title_img.height), 40), Image.Resampling.LANCZOS)
+                self.chat_title_icon = ImageTk.PhotoImage(chat_title_img)
+                
+                title_label = tk.Label(
+                    header_frame,
+                    text=" DVA Alchemist",
+                    image=self.chat_title_icon,
+                    compound=tk.LEFT,
+                    font=("Segoe UI", 16, "bold"),
+                    bg=self.bg_color,
+                    fg=self.fg_color
+                )
+            else:
+                title_label = tk.Label(
+                    header_frame,
+                    text="⚗️ DVA Alchemist",
+                    font=("Segoe UI", 16, "bold"),
+                    bg=self.bg_color,
+                    fg=self.fg_color
+                )
+        except Exception as e:
+            print(f"Could not load chat title icon: {e}")
+            title_label = tk.Label(
+                header_frame,
+                text="⚗️ DVA Alchemist",
+                font=("Segoe UI", 16, "bold"),
+                bg=self.bg_color,
+                fg=self.fg_color
+            )
         title_label.pack(side=tk.LEFT)
         
         close_btn = tk.Button(
@@ -531,9 +699,13 @@ class DVMApp:
         )
         close_btn.pack(side=tk.RIGHT)
         
+        # Chat display container
+        chat_container = tk.Frame(chat_window, bg=self.chat_bg)
+        chat_container.pack(fill=tk.BOTH, expand=True, padx=10, pady=(0, 10))
+        
         # Chat display
         chat_display = scrolledtext.ScrolledText(
-            chat_window,
+            chat_container,
             wrap=tk.WORD,
             font=("Consolas", 10),
             bg=self.chat_bg,
@@ -543,7 +715,8 @@ class DVMApp:
             padx=15,
             pady=15
         )
-        chat_display.pack(fill=tk.BOTH, expand=True, padx=10, pady=(0, 10))
+        chat_display.pack(fill=tk.BOTH, expand=True)
+        
         chat_display.config(state=tk.DISABLED)
         
         # Configure text tags
@@ -556,16 +729,16 @@ class DVMApp:
         chat_display.config(state=tk.NORMAL)
         timestamp = datetime.now().strftime("%H:%M:%S")
         api_status = "✅ Connected" if self.agent.is_ready() else "❌ Not configured"
-        welcome_text = f"""Welcome! I'm your DVM AI Assistant - the Alchemist of Design & Verification!
+        welcome_text = f"""Welcome! I'm your DVA AI Assistant - the Design Verification Alchemist!
 
 AI Status: {api_status} | Model: {Config.AZURE_OPENAI_MODEL_NAME}
 
-Ready to help transform your designs into RTL and verification code!
-You can ask me about:
-- RTL design patterns and best practices
-- UVM verification strategies
-- SystemVerilog coding questions
-- Design specifications and requirements"""
+⚗️ Transmute your ideas into SystemVerilog code:
+   📸 Snap a photo of paper notes → RTL hardware design
+   📄 Upload specifications → Assertions & covergroups
+   ✍️ Hand-drawn diagrams → Complete verification environments
+
+Ready to perform some alchemy? Ask me anything or upload a document to begin!"""
         
         chat_display.insert(tk.END, f"[{timestamp}] ", "timestamp")
         chat_display.insert(tk.END, "Agent: ", "agent")
@@ -825,7 +998,7 @@ You can ask me about:
             
             try:
                 # Read and preview document
-                from document_processor import DocumentReader
+                from src.document_processor import DocumentReader
                 content, file_type = DocumentReader.read_file(filepath)
                 
                 # Store document path
@@ -1133,7 +1306,7 @@ RETURN ONLY CODE IN THIS FORMAT - NO OTHER TEXT. Generate ALL 8 components."""
         # Lazy load vision processor
         if self.vision_processor is None:
             self.add_log("info", "� Initializing vision processor (first time)...")
-            from vision_document_processor import VisionDocumentProcessor
+            from src.vision_document_processor import VisionDocumentProcessor
             self.vision_processor = VisionDocumentProcessor()
         
         # Step 1: Convert pages to images and analyze with vision
@@ -1215,7 +1388,7 @@ RETURN ONLY CODE IN THIS FORMAT - NO OTHER TEXT. Generate ALL 8 components."""
         self.root.update_idletasks()
         
         try:
-            from ai_validator import AIValidator
+            from src.ai_validator import AIValidator
             validator = AIValidator()
             validated_sections = validator.validate_and_rerank_sections(
                 processing_result['relevant_sections'],
@@ -1462,7 +1635,7 @@ RETURN ONLY CODE IN THIS FORMAT - NO OTHER TEXT. Generate ALL 8 components."""
         
         # Create results window
         results_window = tk.Toplevel(self.root)
-        results_window.title("Generated Code - DVM")
+        results_window.title("Generated Code - DVA")
         results_window.geometry("1000x700")
         results_window.configure(bg=self.bg_color)
         
@@ -1614,7 +1787,7 @@ RETURN ONLY CODE IN THIS FORMAT - NO OTHER TEXT. Generate ALL 8 components."""
 def main():
     """Main entry point for the application"""
     root = tk.Tk()
-    app = DVMApp(root)
+    app = DVAApp(root)
     root.mainloop()
 
 

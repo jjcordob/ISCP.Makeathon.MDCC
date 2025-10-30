@@ -1,4 +1,4 @@
-# MDCC - Multimedia Design Code Converter
+# ⚗️ DVA - Design Verification Alchemist
 
 ![Python Version](https://img.shields.io/badge/python-3.14.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
@@ -6,28 +6,32 @@
 
 ## 📋 Overview
 
-**MDCC (Multimedia Design Code Converter)** is an AI-powered application that transforms hand-drawn diagrams, notes, and specifications into production-ready RTL (Register Transfer Level) code or UVM (Universal Verification Methodology) verification environments.
+**DVA (Design Verification Alchemist)** - Inspired by Full Metal Alchemist, transmutes hand-written notes, diagrams, and specifications into production-ready SystemVerilog code.
 
-The application leverages advanced AI capabilities to analyze multimedia inputs such as:
-- Block diagrams
-- State diagrams
-- Flow diagrams
-- Handwritten notes
-- Circuit schematics
-- Design specifications
+🎯 **The Ultimate Transmutation:** Snap a photo of hand-drawn notes on paper → Complete SystemVerilog RTL or verification environment
 
-And converts them into:
-- **SystemVerilog RTL Code** - Complete hardware modules with interfaces
-- **UVM Verification Environments** - Full testbench infrastructure
-- **Markdown Documentation** - Formatted design documentation
+The application leverages AI vision to analyze:
+- **Paper notes** - Hand-written specifications on sheets
+- **Whiteboard photos** - Block diagrams, state machines
+- **Napkin sketches** - Quick design ideas
+- **Tablet drawings** - Digital handwritten notes
+- **PDF documents** - Formal specifications
+- **Timing diagrams** - Protocol descriptions
+
+And transmutes them into:
+- **SystemVerilog RTL** - Synthesizable hardware modules
+- **SVA Assertions** - Formal property checkers
+- **Covergroups** - Functional coverage code
+- **UVM Environments** - Complete testbench infrastructure
+- **Markdown Docs** - Traceable requirement documentation
 
 ## ✨ Features
 
-### 🎯 Core Capabilities
-- **📷 Camera Integration** - Capture diagrams directly from your device's camera
-- **📄 Document Upload** - Support for PDF, DOCX, and TXT files
-- **🤖 AI-Powered Analysis** - Advanced image-to-code conversion using Azure OpenAI
-- **📂 Multi-File Generation** - Automatically generates multiple organized files
+### 🎯 Core Alchemy Powers
+- **� Paper-to-RTL** - Snap photos of hand-drawn diagrams → Working hardware code
+- **⚗️ Vision-First Processing** - AI filters pages (scores 0-10), keeps only specs
+- **✅ Expert Review** - SystemVerilog expert validates code on 8 quality criteria
+- **🎨 Multimedia Input** - Camera capture, document upload, real-time processing
 - **💬 AI Chat Assistant** - Separate chat window for design consultations
 - **👁️ Results Preview** - Tabbed interface for viewing generated files
 - **💾 Flexible Export** - Save individual files or entire file sets
@@ -39,7 +43,44 @@ And converts them into:
 - **Tabbed Results** - Organized view of multiple generated files
 - **Keyboard Shortcuts** - Enhanced productivity with keyboard support
 
-## 🚀 Getting Started
+## � Project Structure
+
+```
+MDCC/
+├── app.py                          # Main application entry point
+├── requirements.txt                # Python dependencies
+├── .env                           # Environment configuration (not in repo)
+├── README.md                      # This file
+│
+├── src/                           # Source code modules
+│   ├── __init__.py
+│   ├── agent.py                   # Main AI agent interface
+│   ├── ai_validator.py            # AI-powered section validator
+│   ├── config.py                  # Configuration management
+│   ├── document_processor.py      # Document processing and NLP
+│   ├── verification_agents.py     # Specialized verification agents
+│   └── vision_document_processor.py # Vision-based document analysis
+│
+├── docs/                          # Documentation
+│   ├── README.md                  # Documentation index
+│   ├── VISION_PROCESSING.md       # Vision pipeline details
+│   ├── EXPERT_REVIEW.md           # Expert review feature
+│   ├── VERSION_TRACKER.md         # Version history
+│   └── ISSUES_AND_RESOLUTIONS.md  # Known issues and fixes
+│
+├── icons/                         # Application icons and images
+│   ├── icon2.png                  # Application icon
+│   ├── name1.png                  # Logo/branding
+│   ├── welcome.png                # Splash screen
+│   └── chat.png                   # Chat window icon
+│
+└── .github/                       # GitHub specific files
+    ├── instructions/              # AI coding instructions
+    ├── prompts/                   # AI prompt templates
+    └── chatmodes/                 # Chat mode configurations
+```
+
+## �🚀 Getting Started
 
 ### Prerequisites
 
@@ -255,7 +296,15 @@ For issues, questions, or suggestions:
 
 Current Version: **1.0.0**
 
-See [VERSION_TRACKER.md](docs/VERSION_TRACKER.md) for detailed version history.
+See [docs/VERSION_TRACKER.md](docs/VERSION_TRACKER.md) for detailed version history.
+
+## 📚 Documentation
+
+For detailed documentation, see the [docs](docs/) directory:
+- [Vision Processing](docs/VISION_PROCESSING.md) - AI vision pipeline details
+- [Expert Review](docs/EXPERT_REVIEW.md) - SV/UVM expert review feature
+- [Version History](docs/VERSION_TRACKER.md) - Changelog and updates
+- [Issues & Resolutions](docs/ISSUES_AND_RESOLUTIONS.md) - Troubleshooting guide
 
 ---
 
