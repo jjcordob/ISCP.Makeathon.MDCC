@@ -82,53 +82,179 @@ MDCC/
 
 ## �🚀 Getting Started
 
+## 🚀 Getting Started
+
 ### Prerequisites
 
-- Python 3.14.0 or higher
-- Webcam (optional, for camera capture feature)
-- Azure OpenAI API credentials
+- **Python 3.14.0 or higher** - [Download here](https://www.python.org/downloads/)
+- **Webcam** (optional, for camera capture feature)
+- **Azure OpenAI API credentials** - Required for AI processing
+- **Git** - For cloning the repository
 
-### Installation
+### Step-by-Step Installation Guide
 
-1. **Clone the repository**
-   ```powershell
-   git clone https://github.com/jjcordob/ISCP.Makeathon.MDCC.git
-   cd MDCC
-   ```
+Follow these steps to set up and run DVA on your machine:
 
-2. **Create and activate virtual environment**
-   ```powershell
-   python -m venv venv
-   .\venv\Scripts\Activate.ps1
-   ```
+#### Step 1: Clone the Repository
 
-3. **Install dependencies**
-   ```powershell
-   pip install -r requirements.txt
-   ```
+```powershell
+# Clone the project
+git clone https://github.com/jjcordob/ISCP.Makeathon.MDCC.git
 
-4. **Configure environment variables**
-   
-   Create a `.env` file in the project root:
-   ```env
-   AZURE_OPENAI_API_KEY=your_api_key_here
-   AZURE_OPENAI_ENDPOINT=your_endpoint_here
-   AZURE_OPENAI_API_VERSION=2024-02-15-preview
-   AZURE_OPENAI_MODEL_NAME=your_model_name
-   ```
+# Navigate to the project directory
+cd MDCC
+```
 
-### Running the Application
+#### Step 2: Create Virtual Environment
 
-**With Virtual Environment:**
+```powershell
+# Create a new virtual environment named 'venv'
+python -m venv venv
+```
+
+**What this does:** Creates an isolated Python environment to avoid conflicts with other projects.
+
+#### Step 3: Activate Virtual Environment
+
+**On Windows (PowerShell):**
+```powershell
+.\venv\Scripts\Activate.ps1
+```
+
+**On Windows (Command Prompt):**
+```cmd
+.\venv\Scripts\activate.bat
+```
+
+**On Linux/Mac:**
+```bash
+source venv/bin/activate
+```
+
+**You'll know it worked when you see** `(venv)` at the start of your terminal prompt.
+
+#### Step 4: Install Dependencies
+
+```powershell
+# Install all required Python packages
+pip install -r requirements.txt
+```
+
+**What this installs:**
+- `tkinter` - GUI framework
+- `opencv-python` - Camera and image processing
+- `Pillow` - Image handling
+- `python-dotenv` - Environment variable management
+- `openai` - Azure OpenAI integration
+- `PyPDF2` - PDF document processing
+- `python-docx` - Word document processing
+- `numpy` - Numerical operations
+- And other dependencies...
+
+#### Step 5: Configure Environment Variables
+
+Create a `.env` file in the project root directory:
+
+**Option A: Using a text editor**
+1. Create a new file named `.env` (note the dot at the start)
+2. Add the following content:
+
+```env
+AZURE_OPENAI_API_KEY=your_api_key_here
+AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
+AZURE_OPENAI_API_VERSION=2024-02-15-preview
+AZURE_OPENAI_MODEL_NAME=gpt-4-vision-preview
+```
+
+**Option B: Using PowerShell**
+```powershell
+@"
+AZURE_OPENAI_API_KEY=your_api_key_here
+AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
+AZURE_OPENAI_API_VERSION=2024-02-15-preview
+AZURE_OPENAI_MODEL_NAME=gpt-4-vision-preview
+"@ | Out-File -FilePath .env -Encoding utf8
+```
+
+**⚠️ Important:** Replace the placeholder values with your actual Azure OpenAI credentials.
+
+#### Step 6: Run the Application
+
+```powershell
+# Make sure your virtual environment is activated (you should see (venv) in prompt)
+python app.py
+```
+
+**Alternative method (specify full path):**
 ```powershell
 .\venv\Scripts\python.exe app.py
 ```
 
-**Or activate venv first:**
+### Quick Start (All-in-One Script)
+
+For a fresh installation, you can run all commands together:
+
 ```powershell
+# Clone, setup, and run (one-time setup)
+git clone https://github.com/jjcordob/ISCP.Makeathon.MDCC.git
+cd MDCC
+python -m venv venv
 .\venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+# Don't forget to create your .env file before running!
 python app.py
 ```
+
+### Running the Application (After Initial Setup)
+
+Once you've completed the installation, you only need these steps to start DVA:
+
+**Option 1 - Activate environment first (recommended):**
+```powershell
+# Navigate to project directory
+cd C:\Users\YourUser\Documents\Projects\MDCC
+
+# Activate virtual environment
+.\venv\Scripts\Activate.ps1
+
+# Run the application
+python app.py
+```
+
+**Option 2 - Direct execution:**
+```powershell
+# Navigate to project directory
+cd C:\Users\YourUser\Documents\Projects\MDCC
+
+# Run directly with venv Python
+.\venv\Scripts\python.exe app.py
+```
+
+### Verifying Installation
+
+After running the application, you should see:
+1. ✅ A splash screen with the DVA logo (displays for 3 seconds)
+2. ✅ The main application window with dark theme
+3. ✅ Processing log showing "✓ AI Agent connected" (if .env is configured correctly)
+4. ⚠️ If you see "❌ AI Agent not configured", check your `.env` file
+
+### Troubleshooting Installation
+
+**Problem:** `python: command not found`
+- **Solution:** Install Python from [python.org](https://www.python.org/downloads/) and ensure "Add to PATH" is checked during installation
+
+**Problem:** Virtual environment won't activate (PowerShell)
+- **Solution:** Run `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser` to allow script execution
+
+**Problem:** `pip install` fails
+- **Solution:** Ensure you have internet connection and try `python -m pip install --upgrade pip` first
+
+**Problem:** "AI Agent not configured" error
+- **Solution:** 
+  1. Check that `.env` file exists in project root
+  2. Verify all environment variables are set correctly
+  3. Ensure no extra spaces around the `=` sign
+  4. Confirm your Azure OpenAI credentials are valid
 
 ## 📖 How to Use
 
